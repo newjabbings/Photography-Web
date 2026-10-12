@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>陈俊亦 Ethan Chen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F1F3F5; --drawer:#E3E7EA; --lip:#EBEEF1; --ink:#30363B; --faint:#8A939A;
+  --print:#FDFEFE; --back:#F5F7F8; --shade:rgba(28,40,52,.15);
+  --slot:22vh; --dw:90vw;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#1E2124; --drawer:#171A1C; --lip:#25292C; --ink:#D5DADE; --faint:#79828A;
+    --print:#E3E6E8; --back:#DCE0E3; --shade:rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1E2124; --drawer:#171A1C; --lip:#25292C; --ink:#D5DADE; --faint:#79828A;
+  --print:#E3E6E8; --back:#DCE0E3; --shade:rgba(0,0,0,.5);
+}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  background:var(--bg);color:var(--ink);
+  font-family:"Noto Serif SC","Songti SC","STSong","Source Han Serif SC",serif;
+  font-weight:300;-webkit-font-smoothing:antialiased;overflow:hidden;
+}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+button:focus-visible{outline:1px solid var(--ink);outline-offset:4px}
+
+/* corner navigation */
+.corner{
+  position:fixed;z-index:40;left:0;right:0;
+  top:calc(env(safe-area-inset-top,0px) + 18px);
+  display:flex;justify-content:space-between;align-items:baseline;
+  padding:0 24px;font-size:13px;letter-spacing:.04em;
+  transition:opacity .5s;
+}
+.corner nav{display:flex;gap:18px;align-items:baseline}
+.corner nav button{color:var(--faint);padding:4px 0}
+.corner nav button[aria-current="true"]{color:var(--ink)}
+.corner .lang{margin-left:10px;color:var(--faint)}
+.corner .lang span{padding:0 2px}
+.corner .lang span.on{color:var(--ink)}
+body.viewing .corner{opacity:0;pointer-events:none}
+
+/* views */
+.view{
+  position:fixed;inset:0;opacity:0;visibility:hidden;
+  transition:opacity .7s ease, visibility 0s linear .7s;
+}
+.view.on{opacity:1;visibility:visible;transition:opacity .7s ease}
+
+/* drawer */
+.slot{
+  position:absolute;top:var(--slot);left:50%;width:var(--dw);transform:translateX(-50%);
+  height:1px;background:var(--faint);opacity:.35;
+}
+.clip{
+  position:absolute;top:var(--slot);left:50%;width:var(--dw);transform:translateX(-50%);
+  bottom:0;overflow:hidden;
+}
+.drawer{position:absolute;left:0;right:0;top:0;touch-action:none;will-change:transform}
+.drawer.anim{transition:transform 1s cubic-bezier(.2,.7,.2,1)}
+.interior{
+  position:absolute;left:0;right:0;top:0;bottom:30px;background:var(--drawer);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.035), inset 0 -22px 30px -26px var(--shade);
+}
+.lip{
+  position:absolute;left:0;right:0;bottom:0;height:30px;width:100%;
+  background:var(--lip);border-top:1px solid rgba(0,0,0,.05);
+  box-shadow:0 8px 16px -10px var(--shade);cursor:grab;
+  display:flex;align-items:center;justify-content:center;
+}
+.lip::after{content:"";width:56px;height:3px;border-radius:2px;background:var(--faint);opacity:.55}
+.hint{
+  position:absolute;left:0;right:0;text-align:center;
+  top:calc(var(--slot) + 52px);font-size:12px;letter-spacing:.08em;color:var(--faint);
+  transition:opacity .6s;pointer-events:none;
+}
+
+.print{
+  position:absolute;background:var(--print);padding:5px;
+  box-shadow:0 1px 2px var(--shade), 0 6px 14px -8px var(--shade);
+  transform:rotate(var(--r));
+  transition:transform .35s ease, box-shadow .35s ease, left .9s cubic-bezier(.2,.7,.2,1), top .9s cubic-bezier(.2,.7,.2,1);
+}
+.print:hover{transform:rotate(var(--r)) translateY(-3px);box-shadow:0 2px 3px var(--shade), 0 12px 22px -10px var(--shade)}
+.print .img,.thumb .img,.front .img{display:block;width:100%;height:100%;background-size:cover;background-position:center}
+
+/* viewer */
+.viewer{position:fixed;inset:0;z-index:50;display:none}
+.viewer.open{display:block}
+.veil{
+  position:absolute;inset:0;
+  background:color-mix(in srgb, var(--bg) 90%, transparent);
+  -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
+  animation:fade .5s ease both;
+}
+.viewer.closing .veil{animation:fadeout .45s ease both}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes fadeout{from{opacity:1}to{opacity:0}}
+.card{position:absolute;perspective:1800px;display:block}
+.inner{
+  position:relative;display:block;width:100%;height:100%;
+  transform-style:preserve-3d;transition:transform .85s cubic-bezier(.3,.7,.2,1);
+}
+.card.flipped .inner{transform:rotateY(180deg)}
+.face{
+  position:absolute;inset:0;display:block;
+  -webkit-backface-visibility:hidden;backface-visibility:hidden;
+  box-shadow:0 2px 4px var(--shade), 0 24px 50px -24px var(--shade);
+}
+.front{background:var(--print);padding:var(--pad,12px)}
+.back{
+  background:var(--back);transform:rotateY(180deg);color:#30363B;
+  display:flex;align-items:center;justify-content:center;padding:10%;text-align:left;
+}
+.back .note{font-size:clamp(14px,1.6vw,17px);line-height:2.1;max-width:24em}
+.back .empty{font-size:13px;color:#8A939A;letter-spacing:.06em}
+.back .date{position:absolute;right:7%;bottom:6%;font-size:12px;color:#8A939A}
+
+.controls{
+  position:absolute;left:0;right:0;
+  bottom:calc(env(safe-area-inset-bottom,0px) + 26px);
+  display:flex;flex-direction:column;align-items:center;gap:8px;font-size:13px;
+  animation:fade .6s ease .2s both;
+}
+.controls .row{display:flex;gap:26px;align-items:baseline}
+.controls .row button{padding:6px 4px;color:var(--ink)}
+.controls .row button:disabled{opacity:.25;cursor:default}
+.count{color:var(--faint);font-variant-numeric:tabular-nums;min-width:4.5em;text-align:center}
+.fliphint{font-size:12px;color:var(--faint);transition:opacity .5s}
+.close{
+  position:absolute;right:24px;top:calc(env(safe-area-inset-top,0px) + 18px);
+  font-size:13px;padding:4px 0;color:var(--faint);animation:fade .6s ease .2s both;
+}
+.close:hover{color:var(--ink)}
+.viewer.closing .controls,.viewer.closing .close{animation:fadeout .3s ease both}
+
+/* index */
+.scroll{overflow-y:auto;-webkit-overflow-scrolling:touch}
+#indexView .wrap{
+  max-width:1100px;margin:0 auto;
+  padding:calc(env(safe-area-inset-top,0px) + 100px) 24px calc(env(safe-area-inset-bottom,0px) + 80px);
+}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:34px 26px;align-items:end}
+.thumb{display:block;width:100%}
+.thumb .frame{display:block;background:var(--print);padding:4px;box-shadow:0 1px 2px var(--shade)}
+.thumb .n{display:block;margin-top:8px;font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
+
+/* about */
+#aboutView .wrap{
+  max-width:30em;margin:0 auto;
+  padding:calc(env(safe-area-inset-top,0px) + 22vh) 28px calc(env(safe-area-inset-bottom,0px) + 80px);
+  font-size:16px;line-height:2.15;
+}
+#aboutView p{margin:0 0 1.5em}
+#aboutView .contact a{color:inherit;text-underline-offset:3px}
+#aboutView .contact{margin-top:3.5em;font-size:13px;color:var(--faint);line-height:1.9}
+
+@media (max-width:640px){
+  .corner{padding:0 18px}
+  .corner nav{gap:14px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition-duration:.01s !important;animation-duration:.01s !important}
+}
+</style>
+</head>
+<body>
+
+<header class="corner">
+  <button id="name" data-i18n="name">陈俊亦</button>
+  <nav>
+    <button data-go="drawer" data-i18n="nDrawer" aria-current="true">抽屉</button>
+    <button data-go="index" data-i18n="nIndex">索引</button>
+    <button data-go="about" data-i18n="nAbout">关于</button>
+    <button class="lang" id="lang" aria-label="切换语言 / Switch language"><span class="on">中</span>/<span>EN</span></button>
+  </nav>
+</header>
+
+<main>
+  <section class="view on" id="drawerView" aria-label="抽屉">
+    <div class="slot"></div>
+    <div class="clip">
+      <div class="drawer" id="drawer">
+        <div class="interior" id="interior"></div>
+        <button class="lip" id="lip" aria-expanded="false" data-i18n-label="lip" aria-label="拉开抽屉"></button>
+      </div>
+    </div>
+    <p class="hint" id="hint" data-i18n="hint">轻轻往下拉</p>
+  </section>
+
+  <section class="view scroll" id="indexView" aria-label="索引">
+    <div class="wrap"><div class="grid" id="grid"></div></div>
+  </section>
+
+  <section class="view scroll" id="aboutView" aria-label="关于">
+    <div class="wrap" id="about"></div>
+  </section>
+</main>
+
+<div class="viewer" id="viewer" role="dialog" aria-modal="true">
+  <div class="veil" id="veil"></div>
+  <button class="card" id="card" data-i18n-label="flipLabel" aria-label="翻面">
+    <span class="inner">
+      <span class="face front"><span class="img" id="frontImg"></span></span>
+      <span class="face back" id="back"></span>
+    </span>
+  </button>
+  <button class="close" id="close" data-i18n="close">放回去</button>
+  <div class="controls">
+    <div class="row">
+      <button id="prev" data-i18n="prev">上一张</button>
+      <span class="count" id="count"></span>
+      <button id="next" data-i18n="next">下一张</button>
+    </div>
+    <span class="fliphint" id="fliphint" data-i18n="flipHint">点击照片翻面</span>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   照片来源（按优先顺序）：
+   1. Cloudinary：填上 cloudName，网站会自动读取所有带 tag 标签的照片。
+      在 Cloudinary 里上传照片、加上标签，网站就会自动更新，不用改代码。
+      每次打开网站，照片的顺序和位置都会重新随机，文件名随便取。
+      背面文字：在照片的 Contextual metadata 里填 note_zh、note_en、date。
+   2. PHOTOS：手动列出照片路径（比例会自动读取）。
+   3. 都没有时，显示 60 张占位图。
+   ============================================================ */
+const CONFIG = { cloudName:"", tag:"drawer" };
+const PHOTOS = [];
+
+const T = {
+  zh:{
+    name:"陈俊亦", nDrawer:"抽屉", nIndex:"索引", nAbout:"关于",
+    hint:"轻轻往下拉", lip:"拉开抽屉", prev:"上一张", next:"下一张",
+    close:"放回去", flipHint:"点击照片翻面", flipLabel:"翻面",
+    empty:"背面还没有写字",
+    about:[
+      "我不太擅长把心里的事说出口。很多时候，我只是停下来，拍下一束落在墙上的光，或者某个没有人注意的角落。",
+      "这些照片是我替自己记住的东西。它们大多很小，很安静，不属于任何重要的时刻。",
+      "它们一直放在抽屉里。现在，我把抽屉拉开一点。"
+    ],
+    contact:'邮箱：<a href="mailto:ethan.cjy0330@gmail.com">ethan.cjy0330@gmail.com</a>'
+  },
+  en:{
+    name:"Ethan Chen", nDrawer:"Drawer", nIndex:"Index", nAbout:"About",
+    hint:"Pull gently", lip:"Open the drawer", prev:"Previous", next:"Next",
+    close:"Put it back", flipHint:"Tap the photo to turn it over", flipLabel:"Turn over",
+    empty:"Nothing written on the back yet",
+    about:[
+      "I'm not good at saying what I feel. Most of the time, I just stop and take a picture of light resting on a wall, or a corner no one notices.",
+      "These photographs are what I keep for myself. Most of them are small and quiet, belonging to no important moment.",
+      "They have always been in a drawer. Now, I'm opening it a little."
+    ],
+    contact:'Email: <a href="mailto:ethan.cjy0330@gmail.com">ethan.cjy0330@gmail.com</a>'
+  }
+};
+
+/* ---------- placeholder photos ---------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const R = mulberry32(11);
+const PAL = [["#dfe9ee","#f6efe4"],["#f3e6df","#fdf8f1"],["#e5ece2","#f7f6ee"],["#ebe4ef","#faf6f2"],
+             ["#f4efd9","#fffdf6"],["#dde4ea","#eef0ea"],["#efdcd6","#f8efe6"],["#e3e9e7","#fbfaf6"]];
+const ACC = ["170,190,165","200,170,160","160,180,200","210,190,140","185,170,200","150,165,160"];
+const RATIOS = [1.5,1.5,0.667,1.25,0.8,1,1.5,0.75];
+const SAMPLE_NOTES = {
+  0:{zh:"那天的光很软，我站了很久，什么也没想。",en:"The light was soft that day. I stood there a long time, thinking of nothing.",date:"2024.06"},
+  3:{zh:"不记得是哪一年的夏天了，只记得很热。",en:"I don't remember which summer it was. Only that it was hot.",date:"2023.08"},
+  7:{zh:"这张一直没给别人看过。",en:"I've never shown this one to anyone.",date:""}
+};
+function placeholderBg(){
+  const p = PAL[Math.floor(R()*PAL.length)], a = ACC[Math.floor(R()*ACC.length)];
+  const x=Math.round(R()*100), y=Math.round(R()*60), x2=Math.round(R()*100), y2=Math.round(40+R()*60);
+  return `radial-gradient(circle at ${x}% ${y}%, rgba(255,255,255,.95), rgba(255,255,255,0) ${Math.round(35+R()*30)}%),`+
+         `radial-gradient(ellipse at ${x2}% ${y2}%, rgba(${a},.45), rgba(${a},0) ${Math.round(25+R()*20)}%),`+
+         `linear-gradient(${Math.round(R()*360)}deg, ${p[0]}, ${p[1]})`;
+}
+function placeholders(){
+  return Array.from({length:60},(_,i)=>{
+    const s = SAMPLE_NOTES[i], bg = placeholderBg();
+    return {small:bg, large:bg, ratio:RATIOS[Math.floor(R()*RATIOS.length)],
+            note:s?{zh:s.zh,en:s.en}:null, date:s?s.date:""};
+  });
+}
+function cldUrl(r, w){
+  return `https://res.cloudinary.com/${CONFIG.cloudName}/image/upload/c_limit,w_${w},f_auto,q_auto/v${r.version}/${r.public_id}.${r.format}`;
+}
+function ratioOf(p){
+  if(p.ratio) return Promise.resolve(p.ratio);
+  return new Promise(res=>{
+    const im = new Image();
+    im.onload = ()=>res(im.naturalWidth/im.naturalHeight || 1.5);
+    im.onerror = ()=>res(1.5);
+    im.src = p.src;
+  });
+}
+async function loadPhotos(){
+  if(CONFIG.cloudName){
+    try{
+      const res = await fetch(`https://res.cloudinary.com/${CONFIG.cloudName}/image/list/${CONFIG.tag}.json`, {cache:"no-store"});
+      if(!res.ok) throw new Error(res.status);
+      const data = await res.json();
+      return data.resources
+        .sort((a,b)=>a.public_id.localeCompare(b.public_id, undefined, {numeric:true}))
+        .map(r=>{
+          const c = (r.context && (r.context.custom || r.context)) || {};
+          const note = (c.note_zh || c.note_en) ? {zh:c.note_zh || c.note_en, en:c.note_en || c.note_zh} : null;
+          return {small:`url("${cldUrl(r,700)}")`, large:`url("${cldUrl(r,2000)}")`,
+                  ratio:r.width/r.height, note, date:c.date || ""};
+        });
+    }catch(err){ console.warn("Cloudinary 照片列表读取失败，改用占位图", err); }
+  }
+  if(PHOTOS.length){
+    return Promise.all(PHOTOS.map(p=>ratioOf(p).then(ratio=>({
+      small:`url("${p.src}")`, large:`url("${p.src}")`, ratio, note:p.note || null, date:p.date || ""
+    }))));
+  }
+  return placeholders();
+}
+let photos = [], N = 0, place = [], prints = [], thumbs = [];
+
+/* ---------- state ---------- */
+const LIP = 30;
+let lang = "zh", view = "drawer", reveal = 0, H = 500, slotY = 0;
+let openFrac = 0.42;            // 一开始只能拉开 42%
+const viewed = new Set();
+let vi = -1, viewerOpen = false, flippedOnce = false;
+const $ = id => document.getElementById(id);
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+const rootEl = document.documentElement;
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const interior = $("interior"), drawer = $("drawer");
+function build(){
+  /* scattered positions: earlier photos sit near the front of the drawer */
+  place = photos.map((_,i)=>({
+    fx:Math.random(),
+    fy:clamp(0.9 - (i/Math.max(1,N-1))*0.84 + (Math.random()-.5)*0.16, 0.02, 0.97),
+    r:(Math.random()-.5)*22,
+    z:1+Math.floor(Math.random()*N)
+  }));
+  prints = photos.map((p,i)=>{
+    const b = document.createElement("button");
+    b.className = "print";
+    b.innerHTML = `<span class="img" style='background-image:${p.small}'></span>`;
+    b.setAttribute("aria-label", `${i+1}`);
+    b.addEventListener("click", ()=>{ if(justDragged) return; openViewer(i, b); });
+    interior.appendChild(b);
+    return b;
+  });
+  thumbs = photos.map((p,i)=>{
+    const b = document.createElement("button");
+    b.className = "thumb";
+    b.innerHTML = `<span class="frame"><span class="img" style='aspect-ratio:${p.ratio};background-image:${p.small}'></span></span>`;
+    b.addEventListener("click", ()=>openViewer(i, b.querySelector(".frame")));
+    $("grid").appendChild(b);
+    return b;
+  });
+}
+
+/* ---------- layout ---------- */
+function printSize(i, base){
+  const r = photos[i].ratio, area = base*base*0.8;
+  const w = Math.sqrt(area*r);
+  return [w, w/r];
+}
+function positionPrint(i){
+  const iw = drawer.clientWidth, ih = H - LIP;
+  const base = innerWidth < 640 ? iw*0.3 : iw*0.155;
+  const [iw0,ih0] = printSize(i, base), q = place[i], el = prints[i];
+  const w = iw0 + 10, h = ih0 + 10;          // 5px 相纸白边
+  el.style.width = w+"px"; el.style.height = h+"px";
+  el.style.left = (8 + q.fx*(iw-w-16))+"px";
+  el.style.top  = (8 + q.fy*(ih-h-16))+"px";
+  el.style.setProperty("--r", q.r+"deg");
+  el.style.zIndex = q.z;
+}
+function layout(){
+  const vw = innerWidth, vh = innerHeight;
+  const dw = Math.min(vw*0.9, 1040);
+  slotY = Math.round(vh*(vw<640 ? 0.2 : 0.22));
+  rootEl.style.setProperty("--dw", dw+"px");
+  rootEl.style.setProperty("--slot", slotY+"px");
+  H = vh - slotY - 24;
+  drawer.style.height = H+"px";
+  for(let i=0;i<N;i++) positionPrint(i);
+  setReveal(Math.min(reveal, maxReveal()), false);
+}
+const maxReveal = ()=> (H - LIP) * openFrac;
+function setReveal(v, anim){
+  reveal = v;
+  drawer.classList.toggle("anim", !!anim && !reduced);
+  drawer.style.transform = `translateY(${-(H-LIP)+v}px)`;
+  $("hint").style.opacity = v > 8 ? 0 : 1;
+  $("lip").setAttribute("aria-expanded", v > 8);
+}
+
+/* ---------- dragging the drawer ---------- */
+let drag = null, justDragged = false;
+drawer.addEventListener("pointerdown", e=>{
+  if(view!=="drawer" || viewerOpen) return;
+  drag = {y:e.clientY, start:reveal, moved:false};
+  justDragged = false;
+});
+addEventListener("pointermove", e=>{
+  if(!drag) return;
+  const dy = e.clientY - drag.y;
+  if(Math.abs(dy) > 5) drag.moved = true;
+  if(!drag.moved) return;
+  const raw = drag.start + dy, m = maxReveal();
+  const v = raw > m ? m + Math.min((raw-m)*0.25, 46) : Math.max(0, raw);
+  setReveal(v, false);
+});
+addEventListener("pointerup", ()=>{
+  if(!drag) return;
+  if(drag.moved){
+    justDragged = true;
+    setTimeout(()=>{ justDragged = false; }, 0);
+    setReveal(clamp(reveal, 0, maxReveal()), true);   // 超出部分会弹回去
+  }
+  drag = null;
+});
+$("lip").addEventListener("click", ()=>{
+  if(justDragged) return;
+  setReveal(reveal > 8 ? 0 : maxReveal(), true);
+});
+$("drawerView").addEventListener("wheel", e=>{
+  if(viewerOpen) return;
+  e.preventDefault();
+  setReveal(clamp(reveal + e.deltaY*0.5, 0, maxReveal()), false);
+}, {passive:false});
+
+/* ---------- viewer ---------- */
+const viewer = $("viewer"), card = $("card");
+let box = null;
+function sourceFor(i){ return view==="index" ? thumbs[i].querySelector(".frame") : prints[i]; }
+function sizeCard(i){
+  const r = photos[i].ratio, vw = innerWidth, vh = innerHeight;
+  const maxW = Math.min(vw*0.84, 960), maxH = vh*(vw<640 ? 0.6 : 0.68);
+  const iw = Math.min(maxW, maxH*r), ih = iw/r;
+  const pad = Math.round(Math.max(8, iw*0.022));
+  card.style.setProperty("--pad", pad+"px");
+  const w = iw + pad*2, h = ih + pad*2;
+  const left = (vw - w)/2, top = (vh - h)/2 - vh*0.03;
+  Object.assign(card.style, {width:w+"px", height:h+"px", left:left+"px", top:top+"px"});
+  return {left, top, w, h};
+}
+function transformTo(el){
+  const r = el.getBoundingClientRect();
+  const sx = el.offsetWidth / box.w;
+  const dx = (r.left + r.width/2) - (box.left + box.w/2);
+  const dy = (r.top + r.height/2) - (box.top + box.h/2);
+  const rot = parseFloat(getComputedStyle(el).getPropertyValue("--r")) || 0;
+  return `translate(${dx}px,${dy}px) scale(${sx}) rotate(${rot}deg)`;
+}
+function isVisible(el){
+  const r = el.getBoundingClientRect();
+  if(view==="drawer" && r.bottom < slotY + 12) return false;
+  return r.bottom > 0 && r.top < innerHeight;
+}
+function fillCard(i){
+  const p = photos[i];
+  $("frontImg").style.backgroundImage = p.large;
+  const back = $("back");
+  back.innerHTML = p.note
+    ? `<span class="note"></span>${p.date ? `<span class="date">${p.date}</span>` : ""}`
+    : `<span class="empty"></span>`;
+  if(p.note) back.querySelector(".note").textContent = p.note[lang];
+  else back.querySelector(".empty").textContent = T[lang].empty;
+  $("count").textContent = `${i+1} / ${N}`;
+  $("prev").disabled = i===0;
+  $("next").disabled = i===N-1;
+}
+function markViewed(i){
+  if(!viewed.has(i)){ viewed.add(i); openFrac = Math.min(1, openFrac + 0.04); }
+}
+function openViewer(i, src){
+  vi = i; viewerOpen = true;
+  markViewed(i);
+  card.classList.remove("flipped");
+  fillCard(i);
+  viewer.classList.remove("closing");
+  viewer.classList.add("open");
+  document.body.classList.add("viewing");
+  box = sizeCard(i);
+  if(!reduced && isVisible(src)){
+    card.animate([{transform:transformTo(src)},{transform:"none"}],
+                 {duration:650, easing:"cubic-bezier(.2,.7,.2,1)"});
+  }
+  src.style.visibility = "hidden";          // 照片被“拿起来”了
+  card.focus({preventScroll:true});
+}
+function goTo(n){
+  if(n<0 || n>=N || n===vi) return;
+  sourceFor(vi).style.visibility = "";
+  const old = vi; vi = n;
+  markViewed(n);
+  sourceFor(n).style.visibility = "hidden";
+  const swap = ()=>{ card.classList.remove("flipped"); fillCard(n); box = sizeCard(n); };
+  if(reduced){ swap(); return; }
+  const dir = n > old ? -1 : 1;
+  card.animate([{opacity:1,transform:"none"},{opacity:0,transform:`translateX(${dir*24}px)`}],
+               {duration:200, easing:"ease-in"}).onfinish = ()=>{
+    swap();
+    card.animate([{opacity:0,transform:`translateX(${-dir*24}px)`},{opacity:1,transform:"none"}],
+                 {duration:320, easing:"ease-out"});
+  };
+}
+function closeViewer(){
+  if(!viewerOpen) return;
+  const i = vi, prevMax = maxReveal() - (H-LIP)*0.04;
+  // 放回抽屉时，位置会稍微变一点
+  if(view==="drawer"){
+    const q = place[i];
+    q.fx = clamp(q.fx + (Math.random()-.5)*0.08, 0, 1);
+    q.fy = clamp(q.fy + (Math.random()-.5)*0.05, 0.02, 0.97);
+    q.r += (Math.random()-.5)*10;
+    q.z = N + 1 + viewed.size;
+    positionPrint(i);
+  }
+  const src = sourceFor(i);
+  const finish = ()=>{
+    viewer.classList.remove("open","closing");
+    document.body.classList.remove("viewing");
+    src.style.visibility = "";
+    viewerOpen = false;
+    // 看得越多，抽屉能拉开得越多
+    if(view==="drawer" && reveal >= prevMax - 30) setReveal(maxReveal(), true);
+  };
+  viewer.classList.add("closing");
+  card.classList.remove("flipped");
+  if(reduced){ finish(); return; }
+  const anim = isVisible(src)
+    ? card.animate([{transform:"none"},{transform:transformTo(src)}],
+                   {duration:560, easing:"cubic-bezier(.5,0,.3,1)", fill:"forwards"})
+    : card.animate([{opacity:1},{opacity:0}], {duration:400, fill:"forwards"});
+  anim.onfinish = ()=>{ finish(); anim.cancel(); };
+}
+
+/* flip + swipe */
+let sx = null, swiped = false;
+card.addEventListener("pointerdown", e=>{ sx = e.clientX; swiped = false; });
+card.addEventListener("pointerup", e=>{
+  if(sx===null) return;
+  const dx = e.clientX - sx; sx = null;
+  if(Math.abs(dx) > 50){ swiped = true; goTo(vi + (dx<0 ? 1 : -1)); }
+});
+card.addEventListener("click", ()=>{
+  if(swiped){ swiped = false; return; }
+  card.classList.toggle("flipped");
+  if(!flippedOnce){ flippedOnce = true; $("fliphint").style.opacity = 0; }
+});
+$("veil").addEventListener("click", closeViewer);
+$("close").addEventListener("click", closeViewer);
+$("prev").addEventListener("click", ()=>goTo(vi-1));
+$("next").addEventListener("click", ()=>goTo(vi+1));
+
+addEventListener("keydown", e=>{
+  if(viewerOpen){
+    if(e.key==="Escape") closeViewer();
+    else if(e.key==="ArrowLeft") goTo(vi-1);
+    else if(e.key==="ArrowRight") goTo(vi+1);
+  } else if(view==="drawer"){
+    if(e.key==="ArrowDown"){ e.preventDefault(); setReveal(clamp(reveal+80,0,maxReveal()), true); }
+    if(e.key==="ArrowUp"){ e.preventDefault(); setReveal(clamp(reveal-80,0,maxReveal()), true); }
+  }
+});
+
+/* ---------- views & language ---------- */
+function go(v){
+  if(v===view) return;
+  if(view==="drawer") setReveal(0, true);     // 离开时，抽屉合上
+  view = v;
+  ["drawer","index","about"].forEach(k=>{
+    $(k+"View").classList.toggle("on", k===v);
+    document.querySelector(`[data-go="${k}"]`).setAttribute("aria-current", k===v);
+  });
+}
+document.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click", ()=>go(b.dataset.go)));
+$("name").addEventListener("click", ()=>go("drawer"));
+
+function applyLang(){
+  rootEl.lang = lang==="zh" ? "zh" : "en";
+  document.querySelectorAll("[data-i18n]").forEach(el=>{ el.textContent = T[lang][el.dataset.i18n]; });
+  document.querySelectorAll("[data-i18n-label]").forEach(el=>{ el.setAttribute("aria-label", T[lang][el.dataset.i18nLabel]); });
+  const spans = $("lang").querySelectorAll("span");
+  spans[0].classList.toggle("on", lang==="zh");
+  spans[1].classList.toggle("on", lang==="en");
+  $("about").innerHTML = T[lang].about.map(p=>`<p></p>`).join("") + `<p class="contact">${T[lang].contact}</p>`;
+  $("about").querySelectorAll("p:not(.contact)").forEach((p,k)=>{ p.textContent = T[lang].about[k]; });
+  if(viewerOpen) fillCard(vi);
+}
+$("lang").addEventListener("click", ()=>{ lang = lang==="zh" ? "en" : "zh"; applyLang(); });
+
+addEventListener("resize", ()=>{ layout(); if(viewerOpen) box = sizeCard(vi); });
+applyLang();
+layout();
+loadPhotos().then(list=>{
+  // 每次刷新都重新洗牌：散落的位置、翻看的顺序、索引页的排列都是随机的
+  for(let i=list.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [list[i],list[j]]=[list[j],list[i]]; }
+  photos = list; N = photos.length;
+  build();
+  layout();
+});
+</script>
+</body>
+</html>
