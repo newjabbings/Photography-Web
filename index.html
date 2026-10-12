@@ -239,7 +239,7 @@ body.viewing .corner{opacity:0;pointer-events:none}
    2. PHOTOS：手动列出照片路径（比例会自动读取）。
    3. 都没有时，显示 60 张占位图。
    ============================================================ */
-const CONFIG = { cloudName:"", tag:"drawer" };
+const CONFIG = { cloudName:"pnqfdygw", tag:"drawer" };
 const PHOTOS = [];
 
 const T = {
@@ -612,6 +612,7 @@ loadPhotos().then(list=>{
   // 每次刷新都重新洗牌：散落的位置、翻看的顺序、索引页的排列都是随机的
   for(let i=list.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [list[i],list[j]]=[list[j],list[i]]; }
   photos = list; N = photos.length;
+  if(N <= 12) openFrac = 1;      // 照片还很少时，抽屉可以直接完全拉开
   build();
   layout();
 });
